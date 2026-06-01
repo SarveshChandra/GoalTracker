@@ -126,6 +126,10 @@ final class TaskItem: NSManagedObject, Identifiable {
         baseComputedStatus
     }
 
+    var isActionable: Bool {
+        baseComputedStatus != .completed
+    }
+
     func computedStatus(selectedTaskID: UUID?) -> TaskStatus {
         let baseStatus = baseComputedStatus
         if selectedTaskID == id {

@@ -34,7 +34,7 @@ struct SelectedTaskSessionStudySection: View {
     let editSession: (WorkSession) -> Void
 
     private var taskStatus: TaskStatus {
-        task.computedStatus(selectedTaskID: task.id)
+        task.baseComputedStatus
     }
 
     private var selectedSession: WorkSession? {

@@ -70,7 +70,9 @@ struct DailyStreakView: View {
     }
 
     private func sessionsFor(_ day: Date) -> [WorkSession] {
-        sessions.filter { DateUtils.isDate($0.sessionDate, inSameDayAs: day) }
+        sessions.filter {
+            DateUtils.isDate($0.sessionDate, inSameDayAs: day) && $0.status.countsTowardDailyStreak
+        }
             .sorted { $0.status.displayName < $1.status.displayName }
     }
 }

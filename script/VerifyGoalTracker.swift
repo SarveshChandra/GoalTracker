@@ -90,6 +90,8 @@ struct VerifyGoalTracker {
         verify(ComputedPriority(taskPriority: .highest) == .highest, "Standalone Task Highest priority should display as Highest.")
         verify(SessionStatus.partial.displayName == "Partially Completed", "Partial Session status should display as Partially Completed.")
         verify(StatusTextStyle.usesBoldWeight(SessionStatus.partial.displayName), "Partially Completed Session status should use bold text weight.")
+        verify(!SessionStatus.notStarted.countsTowardDailyStreak, "Not Started Sessions should not count toward Daily Streak.")
+        verify(SessionStatus.partial.countsTowardDailyStreak && SessionStatus.completed.countsTowardDailyStreak, "Partial and Completed Sessions should count toward Daily Streak.")
 
         let sortedGoals = goals.sorted { GoalTrackerSort.goals($0, $1, priorities: goalPriorities) }
         verify(zip(sortedGoals, sortedGoals.dropFirst()).allSatisfy {
@@ -141,11 +143,13 @@ struct VerifyGoalTracker {
 
         if let taskWithCompletedSessions = tasks.first(where: { !$0.sessions.isEmpty && $0.sessions.allSatisfy { $0.status == .completed } }) {
             verify(taskWithCompletedSessions.isCompleteForProgress, "A Task with only completed Sessions should count complete.")
+            verify(!taskWithCompletedSessions.isActionable, "A completed Task should not remain actionable.")
             verify(SessionFocusService.firstIncompleteSession(for: taskWithCompletedSessions) == nil, "A Task with all Sessions completed should not have a selected incomplete Session.")
         }
 
         if let taskWithPartialSession = tasks.first(where: { $0.sessions.contains { $0.status == .partial } }) {
             verify(!taskWithPartialSession.isCompleteForProgress, "A Task with a Partial Session should not count complete.")
+            verify(taskWithPartialSession.isActionable, "A Task with a Partial Session should remain actionable.")
             verify(taskWithPartialSession.sessionProgress > 0 && taskWithPartialSession.sessionProgress < 100, "A Task with a Partial Session should have partial session-weighted progress.")
             let orderedSessions = SessionFocusService.orderedSessions(for: taskWithPartialSession)
             let selectedSession = SessionFocusService.firstIncompleteSession(for: taskWithPartialSession)

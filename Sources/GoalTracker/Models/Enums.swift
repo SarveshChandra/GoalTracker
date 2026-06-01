@@ -275,6 +275,10 @@ enum SessionStatus: String, CaseIterable, Identifiable, Codable {
         case .completed: 1
         }
     }
+
+    var countsTowardDailyStreak: Bool {
+        self == .partial || self == .completed
+    }
 }
 
 enum ThemePreference: String, CaseIterable, Identifiable, Codable {

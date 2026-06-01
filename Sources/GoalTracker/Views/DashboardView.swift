@@ -34,8 +34,9 @@ struct DashboardView: View {
     }
 
     private var activeTasks: [TaskItem] {
-        guard let selectedTask, selectedTask.computedStatus(selectedTaskID: filters.taskID) == .active else { return [] }
-        return [selectedTask]
+        tasks
+            .filter(\.isActionable)
+            .sorted(by: dashboardTaskPrecedes)
     }
 
     private var todaySessions: [WorkSession] {
@@ -92,6 +93,20 @@ struct DashboardView: View {
         SessionFocusService.firstIncompleteSession(in: selectedTaskSessions)
     }
 
+    private func dashboardTaskPrecedes(_ left: TaskItem, _ right: TaskItem) -> Bool {
+        if left.baseComputedStatus.focusRank != right.baseComputedStatus.focusRank {
+            return left.baseComputedStatus.focusRank < right.baseComputedStatus.focusRank
+        }
+        return GoalTrackerSort.tasks(left, right, goalPriorities: goalPriorities)
+    }
+
+    private func nextActiveTasks(for goal: Goal) -> [TaskItem] {
+        goal.milestones
+            .flatMap(\.tasks)
+            .filter(\.isActionable)
+            .sorted(by: dashboardTaskPrecedes)
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
@@ -124,7 +139,7 @@ struct DashboardView: View {
                             DashboardGoalCard(
                                 goal: goal,
                                 priority: goalPriorities[goal.id] ?? GoalPriorityService.standalonePriority(for: goal),
-                                selectedTaskID: filters.taskID
+                                nextActiveTasks: nextActiveTasks(for: goal)
                             )
                         }
                     }
@@ -243,7 +258,7 @@ struct DashboardView: View {
 private struct DashboardGoalCard: View {
     let goal: Goal
     let priority: ComputedPriority
-    let selectedTaskID: UUID?
+    let nextActiveTasks: [TaskItem]
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -277,7 +292,7 @@ private struct DashboardGoalCard: View {
             }
 
             ReadOnlyField(title: "Current / Next Active Milestones", value: goal.milestones.filter { $0.status == .inProgress || $0.status == .overdue }.prefix(3).map(\.name).joined(separator: ", "))
-            ReadOnlyField(title: "Next Active Tasks", value: goal.milestones.flatMap(\.tasks).filter { $0.computedStatus(selectedTaskID: selectedTaskID) == .active }.prefix(3).map(\.name).joined(separator: ", "))
+            ReadOnlyField(title: "Next Active Tasks", value: nextActiveTasks.prefix(3).map(\.name).joined(separator: ", "))
             ReadOnlyField(title: "Anti-Goal", value: goal.antiGoal)
             ReadOnlyField(title: "Sacrifice", value: goal.sacrifice)
         }
@@ -365,7 +380,7 @@ private struct DashboardSelectedTaskSessionCard: View {
                         .foregroundStyle(.secondary)
                 }
                 Spacer()
-                let status = task.computedStatus(selectedTaskID: task.id)
+                let status = task.baseComputedStatus
                 StatusBadge(text: status.rawValue, color: GoalTrackerTheme.background(for: status))
             }
 
