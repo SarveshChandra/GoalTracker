@@ -67,12 +67,15 @@ cat >"$INFO_PLIST" <<PLIST
 PLIST
 
 open_app() {
-  /usr/bin/open -n "$APP_BUNDLE"
+  /usr/bin/open -n "$APP_BUNDLE" --args "$@"
 }
 
 case "$MODE" in
   run)
     open_app
+    ;;
+  --preview-goals|preview-goals)
+    open_app --preview-goals
     ;;
   --debug|debug)
     lldb -- "$APP_BINARY"
@@ -91,7 +94,7 @@ case "$MODE" in
     pgrep -f "$APP_BINARY" >/dev/null
     ;;
   *)
-    echo "usage: $0 [run|--debug|--logs|--telemetry|--verify]" >&2
+    echo "usage: $0 [run|preview-goals|--debug|--logs|--telemetry|--verify]" >&2
     exit 2
     ;;
 esac

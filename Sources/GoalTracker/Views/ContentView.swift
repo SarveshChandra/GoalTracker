@@ -2,6 +2,9 @@ import CoreData
 import SwiftUI
 
 struct ContentView: View {
+    let initialSectionOverride: NavigationSection?
+    let allowsAutomaticBackupsOverride: Bool?
+
     @Environment(\.managedObjectContext) private var managedObjectContext
     @Environment(\.scenePhase) private var scenePhase
     @AppStorage("GoalTracker.selectedSection") private var selectedSectionRaw = NavigationSection.dashboard.rawValue
@@ -14,6 +17,14 @@ struct ContentView: View {
     @AppStorage("GoalTracker.lastBackupPath") private var lastBackupPath = ""
     @AppStorage("GoalTracker.lastBackupError") private var lastBackupError = ""
     @AppStorage("GoalTracker.defaultDashboardStartScreen") private var defaultDashboardStartScreen = true
+
+    init(
+        initialSectionOverride: NavigationSection? = nil,
+        allowsAutomaticBackupsOverride: Bool? = nil
+    ) {
+        self.initialSectionOverride = initialSectionOverride
+        self.allowsAutomaticBackupsOverride = allowsAutomaticBackupsOverride
+    }
 
     private var selectedSection: Binding<NavigationSection> {
         Binding(
@@ -95,16 +106,24 @@ struct ContentView: View {
         .accentColor(GoalTrackerTheme.appYellow)
         .onAppear {
             DemoDataService.seedIfEmpty(in: managedObjectContext)
-            if defaultDashboardStartScreen {
+            if let initialSectionOverride {
+                selectedSectionRaw = initialSectionOverride.rawValue
+            } else if defaultDashboardStartScreen {
                 selectedSectionRaw = NavigationSection.dashboard.rawValue
             }
-            runAutomaticBackupIfNeeded(minimumInterval: 21_600)
-        }
-        .onChange(of: scenePhase) { _, phase in
-            if phase == .background {
+            if automaticBackupsEnabled {
                 runAutomaticBackupIfNeeded(minimumInterval: 21_600)
             }
         }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .background && automaticBackupsEnabled {
+                runAutomaticBackupIfNeeded(minimumInterval: 21_600)
+            }
+        }
+    }
+
+    private var automaticBackupsEnabled: Bool {
+        allowsAutomaticBackupsOverride ?? autoICloudBackupsEnabled
     }
 
     @ViewBuilder
@@ -130,7 +149,7 @@ struct ContentView: View {
     }
 
     private func runAutomaticBackupIfNeeded(minimumInterval: TimeInterval = 86_400) {
-        guard autoICloudBackupsEnabled else { return }
+        guard automaticBackupsEnabled else { return }
 
         let lastBackupDate = lastAutomaticBackupAt > 0 ? Date(timeIntervalSince1970: lastAutomaticBackupAt) : nil
         do {

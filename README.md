@@ -2,7 +2,21 @@
 
 Goal Tracker is a native macOS SwiftUI app for Values, Goals, Milestones, Tasks, Sessions, Daily Streak, and Dashboard focus tracking.
 
-## Run
+## Screenshot
+
+The screenshot below uses an in-memory preview mode with synthetic data, so no personal app data is shown.
+
+![Goals Sheet preview](docs/goals-sheet-preview.png)
+
+## Build
+
+Requirements:
+
+- macOS 14 or newer
+- Xcode command line tools with `swiftc`
+- `iconutil` available on the system
+
+Build and run the app bundle:
 
 Use the project-local run script:
 
@@ -11,6 +25,15 @@ Use the project-local run script:
 ```
 
 The script compiles the SwiftUI/Core Data app with `swiftc`, generates the app icon, stages `dist/Goal Tracker.app`, and launches it as a normal macOS app bundle. The Codex Run action is wired to the same script.
+
+Useful modes:
+
+```bash
+./script/build_and_run.sh --verify
+./script/build_and_run.sh preview-goals
+```
+
+`--verify` confirms the app launches successfully. `preview-goals` opens the README preview window using synthetic in-memory data.
 
 ## Persistence
 

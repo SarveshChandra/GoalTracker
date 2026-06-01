@@ -3,6 +3,40 @@ import CoreData
 import Darwin
 import SwiftUI
 
+private enum GoalTrackerLaunchMode: Equatable {
+    case normal
+    case previewGoals
+
+    init(arguments: [String]) {
+        if arguments.contains("--preview-goals") {
+            self = .previewGoals
+        } else {
+            self = .normal
+        }
+    }
+
+    var usesInMemoryStore: Bool {
+        switch self {
+        case .normal: false
+        case .previewGoals: true
+        }
+    }
+
+    var initialSection: NavigationSection? {
+        switch self {
+        case .normal: nil
+        case .previewGoals: .goals
+        }
+    }
+
+    var allowsAutomaticBackups: Bool {
+        switch self {
+        case .normal: true
+        case .previewGoals: false
+        }
+    }
+}
+
 final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.regular)
@@ -21,16 +55,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 struct GoalTrackerApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @AppStorage("GoalTracker.themePreference") private var themePreferenceRaw = ThemePreference.system.rawValue
-    private let persistenceController = PersistenceController.shared
+    private let launchMode: GoalTrackerLaunchMode
+    private let persistenceController: PersistenceController
 
     private var theme: ThemePreference {
         ThemePreference(rawValue: themePreferenceRaw) ?? .system
     }
 
     init() {
+        let launchMode = GoalTrackerLaunchMode(arguments: CommandLine.arguments)
+        self.launchMode = launchMode
+        self.persistenceController = launchMode.usesInMemoryStore ? PersistenceController(inMemory: true) : PersistenceController.shared
+
         if CommandLine.arguments.contains("--reset-demo-data") {
             DemoDataService.installDemoData(in: persistenceController.container.viewContext, markInstalled: true)
             Darwin.exit(0)
+        }
+
+        if launchMode == .previewGoals {
+            PreviewDataService.installReadmePreviewData(in: persistenceController.container.viewContext)
         }
 
         UserDefaults.standard.set(true, forKey: "ApplePersistenceIgnoreState")
@@ -39,7 +82,10 @@ struct GoalTrackerApp: App {
 
     var body: some Scene {
         Window("Goal Tracker", id: "main") {
-            ContentView()
+            ContentView(
+                initialSectionOverride: launchMode.initialSection,
+                allowsAutomaticBackupsOverride: launchMode.allowsAutomaticBackups
+            )
                 .font(.custom("Helvetica Neue", size: 13))
                 .goalTrackerAppTheme(theme)
                 .environment(\.managedObjectContext, persistenceController.container.viewContext)
