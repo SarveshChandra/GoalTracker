@@ -35,6 +35,20 @@ private enum GoalTrackerLaunchMode: Equatable {
         case .previewGoals: false
         }
     }
+
+    var userDefaults: UserDefaults {
+        switch self {
+        case .normal:
+            return .standard
+        case .previewGoals:
+            let suiteName = "local.goaltracker.app.preview"
+            let defaults = UserDefaults(suiteName: suiteName) ?? .standard
+            defaults.removePersistentDomain(forName: suiteName)
+            defaults.set(NavigationSection.goals.rawValue, forKey: "GoalTracker.selectedSection")
+            defaults.set(false, forKey: "GoalTracker.autoICloudBackupsEnabled")
+            return defaults
+        }
+    }
 }
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
@@ -57,6 +71,7 @@ struct GoalTrackerApp: App {
     @AppStorage("GoalTracker.themePreference") private var themePreferenceRaw = ThemePreference.system.rawValue
     private let launchMode: GoalTrackerLaunchMode
     private let persistenceController: PersistenceController
+    private let userDefaults: UserDefaults
 
     private var theme: ThemePreference {
         ThemePreference(rawValue: themePreferenceRaw) ?? .system
@@ -66,6 +81,7 @@ struct GoalTrackerApp: App {
         let launchMode = GoalTrackerLaunchMode(arguments: CommandLine.arguments)
         self.launchMode = launchMode
         self.persistenceController = launchMode.usesInMemoryStore ? PersistenceController(inMemory: true) : PersistenceController.shared
+        self.userDefaults = launchMode.userDefaults
 
         if CommandLine.arguments.contains("--reset-demo-data") {
             DemoDataService.installDemoData(in: persistenceController.container.viewContext, markInstalled: true)
@@ -84,8 +100,11 @@ struct GoalTrackerApp: App {
         Window("Goal Tracker", id: "main") {
             ContentView(
                 initialSectionOverride: launchMode.initialSection,
-                allowsAutomaticBackupsOverride: launchMode.allowsAutomaticBackups
+                allowsAutomaticBackupsOverride: launchMode.allowsAutomaticBackups,
+                userDefaults: userDefaults
             )
+                .defaultAppStorage(userDefaults)
+                .environment(\.goalTrackerUserDefaults, userDefaults)
                 .font(.custom("Helvetica Neue", size: 13))
                 .goalTrackerAppTheme(theme)
                 .environment(\.managedObjectContext, persistenceController.container.viewContext)
@@ -94,7 +113,9 @@ struct GoalTrackerApp: App {
         .defaultSize(width: 1480, height: 900)
 
         Settings {
-            SettingsView()
+            SettingsView(allowsDataSafetyActions: launchMode.allowsAutomaticBackups, userDefaults: userDefaults)
+                .defaultAppStorage(userDefaults)
+                .environment(\.goalTrackerUserDefaults, userDefaults)
                 .font(.custom("Helvetica Neue", size: 13))
                 .goalTrackerAppTheme(theme)
                 .environment(\.managedObjectContext, persistenceController.container.viewContext)

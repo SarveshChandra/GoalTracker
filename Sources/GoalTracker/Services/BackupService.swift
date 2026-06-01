@@ -34,42 +34,46 @@ enum BackupService {
     static func createAutomaticBackupIfNeeded(
         from context: NSManagedObjectContext,
         lastBackupDate: Date?,
-        minimumInterval: TimeInterval = 86_400
+        minimumInterval: TimeInterval = 86_400,
+        userDefaults: UserDefaults = .standard
     ) throws -> BackupResult? {
         if let lastBackupDate, Date().timeIntervalSince(lastBackupDate) < minimumInterval {
             return nil
         }
 
         let folders = try automaticBackupFolders()
-        return try writeBackup(from: context, to: folders, kind: .automatic)
+        return try writeBackup(from: context, to: folders, kind: .automatic, userDefaults: userDefaults)
     }
 
-    static func createManualBackup(from context: NSManagedObjectContext) throws -> BackupResult {
+    static func createManualBackup(from context: NSManagedObjectContext, userDefaults: UserDefaults = .standard) throws -> BackupResult {
         let folders = try manualBackupFolders()
-        return try writeBackup(from: context, to: folders, kind: .manual)
+        return try writeBackup(from: context, to: folders, kind: .manual, userDefaults: userDefaults)
     }
 
-    static func createPreRestoreBackup(from context: NSManagedObjectContext) throws -> BackupResult {
+    static func createPreRestoreBackup(from context: NSManagedObjectContext, userDefaults: UserDefaults = .standard) throws -> BackupResult {
         let folders = try preRestoreBackupFolders()
-        return try writeBackup(from: context, to: folders, kind: .preRestore)
+        return try writeBackup(from: context, to: folders, kind: .preRestore, userDefaults: userDefaults)
     }
 
     static func writeBackup(
         from context: NSManagedObjectContext,
         to folder: URL,
-        kind: BackupKind
+        kind: BackupKind,
+        userDefaults: UserDefaults = .standard
     ) throws -> BackupResult {
         try writeBackup(
             from: context,
             to: [folder],
-            kind: kind
+            kind: kind,
+            userDefaults: userDefaults
         )
     }
 
     static func writeBackup(
         from context: NSManagedObjectContext,
         to folders: [URL],
-        kind: BackupKind
+        kind: BackupKind,
+        userDefaults: UserDefaults = .standard
     ) throws -> BackupResult {
         let fileManager = FileManager.default
         let createdAt = Date()
@@ -79,7 +83,7 @@ enum BackupService {
         }
 
         for url in urls {
-            try ImportExportService.writeJSONSnapshot(from: context, to: url)
+            try ImportExportService.writeJSONSnapshot(from: context, to: url, userDefaults: userDefaults)
         }
 
         let prunedCount = try pruneBackupsIfNeeded(in: folders, kind: kind)

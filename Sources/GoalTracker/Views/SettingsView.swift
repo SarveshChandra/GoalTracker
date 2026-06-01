@@ -4,6 +4,7 @@ import SwiftUI
 
 struct SettingsView: View {
     @Environment(\.managedObjectContext) private var managedObjectContext
+    @Environment(\.goalTrackerUserDefaults) private var goalTrackerUserDefaults
     @AppStorage("GoalTracker.themePreference") private var themePreferenceRaw = ThemePreference.system.rawValue
     @AppStorage("GoalTracker.defaultDashboardStartScreen") private var defaultDashboardStartScreen = true
     @AppStorage("GoalTracker.confirmBeforeDelete") private var confirmBeforeDelete = true
@@ -17,6 +18,20 @@ struct SettingsView: View {
     @State private var showRestoreConfirmation = false
     @State private var healthReport: DataHealthReport?
     @State private var healthError: String?
+
+    var allowsDataSafetyActions = true
+
+    init(allowsDataSafetyActions: Bool = true, userDefaults: UserDefaults? = nil) {
+        self.allowsDataSafetyActions = allowsDataSafetyActions
+        _themePreferenceRaw = AppStorage(wrappedValue: ThemePreference.system.rawValue, "GoalTracker.themePreference", store: userDefaults)
+        _defaultDashboardStartScreen = AppStorage(wrappedValue: true, "GoalTracker.defaultDashboardStartScreen", store: userDefaults)
+        _confirmBeforeDelete = AppStorage(wrappedValue: true, "GoalTracker.confirmBeforeDelete", store: userDefaults)
+        _confirmSessionDateClear = AppStorage(wrappedValue: true, "GoalTracker.confirmSessionDateClear", store: userDefaults)
+        _autoICloudBackupsEnabled = AppStorage(wrappedValue: true, "GoalTracker.autoICloudBackupsEnabled", store: userDefaults)
+        _lastAutomaticBackupAt = AppStorage(wrappedValue: 0.0, "GoalTracker.lastAutomaticBackupAt", store: userDefaults)
+        _lastBackupPath = AppStorage(wrappedValue: "", "GoalTracker.lastBackupPath", store: userDefaults)
+        _lastBackupError = AppStorage(wrappedValue: "", "GoalTracker.lastBackupError", store: userDefaults)
+    }
 
     private var selectedThemePreference: ThemePreference {
         ThemePreference(rawValue: themePreferenceRaw) ?? .system
@@ -70,18 +85,21 @@ struct SettingsView: View {
                         } label: {
                             Label("Backup Now", systemImage: "icloud.and.arrow.up")
                         }
+                        .disabled(!allowsDataSafetyActions)
 
                         Button {
                             chooseRestoreBackup()
                         } label: {
                             Label("Restore JSON Backup", systemImage: "arrow.clockwise.icloud")
                         }
+                        .disabled(!allowsDataSafetyActions)
 
                         Button {
                             openBackupFolder()
                         } label: {
                             Label("Open Backup Folder", systemImage: "folder")
                         }
+                        .disabled(!allowsDataSafetyActions)
                     }
 
                     if lastAutomaticBackupAt > 0 {
@@ -208,7 +226,7 @@ struct SettingsView: View {
 
     private func runManualBackup() {
         do {
-            let result = try BackupService.createManualBackup(from: managedObjectContext)
+            let result = try BackupService.createManualBackup(from: managedObjectContext, userDefaults: goalTrackerUserDefaults)
             let backupSummary = backupPathSummary(for: result)
             lastBackupPath = backupSummary
             lastBackupError = ""
@@ -234,8 +252,8 @@ struct SettingsView: View {
         guard let restoreCandidate else { return }
 
         do {
-            _ = try? BackupService.createPreRestoreBackup(from: managedObjectContext)
-            try ImportExportService.restoreJSON(from: restoreCandidate, into: managedObjectContext)
+            _ = try? BackupService.createPreRestoreBackup(from: managedObjectContext, userDefaults: goalTrackerUserDefaults)
+            try ImportExportService.restoreJSON(from: restoreCandidate, into: managedObjectContext, userDefaults: goalTrackerUserDefaults)
             message = "Restored backup from \(restoreCandidate.path)"
             self.restoreCandidate = nil
         } catch {
@@ -271,7 +289,7 @@ struct SettingsView: View {
 
     private func runExportJSON() {
         do {
-            if let url = try ImportExportService.exportJSON(from: managedObjectContext) {
+            if let url = try ImportExportService.exportJSON(from: managedObjectContext, userDefaults: goalTrackerUserDefaults) {
                 message = "Exported JSON to \(url.path)"
             }
         } catch {
@@ -281,7 +299,7 @@ struct SettingsView: View {
 
     private func runExportCSV() {
         do {
-            if let url = try ImportExportService.exportCSV(from: managedObjectContext) {
+            if let url = try ImportExportService.exportCSV(from: managedObjectContext, userDefaults: goalTrackerUserDefaults) {
                 message = "Exported CSV files to \(url.path)"
             }
         } catch {

@@ -13,6 +13,11 @@ struct ValuesView: View {
     @State private var editingMyValue: MyValue?
     @State private var valuesRefreshID = 0
 
+    init(userDefaults: UserDefaults? = nil) {
+        _myValuesRaw = AppStorage(wrappedValue: "", "GoalTracker.myValues", store: userDefaults)
+        _confirmBeforeDelete = AppStorage(wrappedValue: true, "GoalTracker.confirmBeforeDelete", store: userDefaults)
+    }
+
     private var filteredValues: [CoreValue] {
         values
             .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }

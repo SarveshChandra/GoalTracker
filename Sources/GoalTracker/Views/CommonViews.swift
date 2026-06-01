@@ -622,11 +622,8 @@ struct SessionStatusPicker: View {
     var body: some View {
         Picker("Status", selection: $status) {
             ForEach(SessionStatus.allCases) { state in
-                HStack {
-                    SessionStatusCircle(status: state, size: 14)
-                    Text(state.displayName)
-                }
-                .tag(state)
+                Text(state.displayName)
+                    .tag(state)
             }
         }
         .pickerStyle(.segmented)

@@ -6,6 +6,7 @@ struct ContentView: View {
     let allowsAutomaticBackupsOverride: Bool?
 
     @Environment(\.managedObjectContext) private var managedObjectContext
+    @Environment(\.goalTrackerUserDefaults) private var goalTrackerUserDefaults
     @Environment(\.scenePhase) private var scenePhase
     @AppStorage("GoalTracker.selectedSection") private var selectedSectionRaw = NavigationSection.dashboard.rawValue
     @AppStorage("GoalTracker.globalGoalFilter") private var selectedGoalIDRaw = ""
@@ -20,10 +21,21 @@ struct ContentView: View {
 
     init(
         initialSectionOverride: NavigationSection? = nil,
-        allowsAutomaticBackupsOverride: Bool? = nil
+        allowsAutomaticBackupsOverride: Bool? = nil,
+        userDefaults: UserDefaults? = nil
     ) {
         self.initialSectionOverride = initialSectionOverride
         self.allowsAutomaticBackupsOverride = allowsAutomaticBackupsOverride
+        _selectedSectionRaw = AppStorage(wrappedValue: NavigationSection.dashboard.rawValue, "GoalTracker.selectedSection", store: userDefaults)
+        _selectedGoalIDRaw = AppStorage(wrappedValue: "", "GoalTracker.globalGoalFilter", store: userDefaults)
+        _selectedMilestoneIDRaw = AppStorage(wrappedValue: "", "GoalTracker.globalMilestoneFilter", store: userDefaults)
+        _selectedTaskIDRaw = AppStorage(wrappedValue: "", "GoalTracker.globalTaskFilter", store: userDefaults)
+        _themePreferenceRaw = AppStorage(wrappedValue: ThemePreference.system.rawValue, "GoalTracker.themePreference", store: userDefaults)
+        _autoICloudBackupsEnabled = AppStorage(wrappedValue: true, "GoalTracker.autoICloudBackupsEnabled", store: userDefaults)
+        _lastAutomaticBackupAt = AppStorage(wrappedValue: 0.0, "GoalTracker.lastAutomaticBackupAt", store: userDefaults)
+        _lastBackupPath = AppStorage(wrappedValue: "", "GoalTracker.lastBackupPath", store: userDefaults)
+        _lastBackupError = AppStorage(wrappedValue: "", "GoalTracker.lastBackupError", store: userDefaults)
+        _defaultDashboardStartScreen = AppStorage(wrappedValue: true, "GoalTracker.defaultDashboardStartScreen", store: userDefaults)
     }
 
     private var selectedSection: Binding<NavigationSection> {
@@ -132,7 +144,7 @@ struct ContentView: View {
         case .dashboard:
             DashboardView(filters: globalFilters)
         case .values:
-            ValuesView()
+            ValuesView(userDefaults: goalTrackerUserDefaults)
         case .goals:
             GoalsView(filters: globalFilters, selectionActions: selectionActions)
         case .milestones:
@@ -144,7 +156,7 @@ struct ContentView: View {
         case .dailyStreak:
             DailyStreakView()
         case .settings:
-            SettingsView()
+            SettingsView(allowsDataSafetyActions: automaticBackupsEnabled, userDefaults: goalTrackerUserDefaults)
         }
     }
 
@@ -156,7 +168,8 @@ struct ContentView: View {
             if let result = try BackupService.createAutomaticBackupIfNeeded(
                 from: managedObjectContext,
                 lastBackupDate: lastBackupDate,
-                minimumInterval: minimumInterval
+                minimumInterval: minimumInterval,
+                userDefaults: goalTrackerUserDefaults
             ) {
                 lastAutomaticBackupAt = result.createdAt.timeIntervalSince1970
                 lastBackupPath = ([result.url] + result.mirroredURLs).map(\.path).joined(separator: "\n")

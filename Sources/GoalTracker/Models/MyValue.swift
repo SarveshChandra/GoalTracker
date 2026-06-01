@@ -13,12 +13,12 @@ struct MyValue: Identifiable, Codable, Equatable {
 enum MyValueStore {
     static let storageKey = "GoalTracker.myValues"
 
-    static func currentValues() -> [MyValue] {
-        decode(UserDefaults.standard.string(forKey: storageKey) ?? "")
+    static func currentValues(in userDefaults: UserDefaults = .standard) -> [MyValue] {
+        decode(userDefaults.string(forKey: storageKey) ?? "")
     }
 
-    static func save(_ values: [MyValue]) {
-        UserDefaults.standard.set(encode(values), forKey: storageKey)
+    static func save(_ values: [MyValue], in userDefaults: UserDefaults = .standard) {
+        userDefaults.set(encode(values), forKey: storageKey)
     }
 
     static func decode(_ rawValue: String) -> [MyValue] {

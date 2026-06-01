@@ -206,20 +206,20 @@ struct SessionDTO: Codable {
 
 @MainActor
 enum ImportExportService {
-    static func exportJSON(from context: NSManagedObjectContext) throws -> URL? {
+    static func exportJSON(from context: NSManagedObjectContext, userDefaults: UserDefaults = .standard) throws -> URL? {
         let panel = NSSavePanel()
         panel.title = "Export Goal Tracker JSON"
         panel.nameFieldStringValue = "GoalTrackerExport.json"
         panel.allowedContentTypes = [.json]
 
         guard panel.runModal() == .OK, let url = panel.url else { return nil }
-        try writeJSONSnapshot(from: context, to: url)
+        try writeJSONSnapshot(from: context, to: url, userDefaults: userDefaults)
         return url
     }
 
-    static func importJSON(into context: NSManagedObjectContext) throws -> URL? {
+    static func importJSON(into context: NSManagedObjectContext, userDefaults: UserDefaults = .standard) throws -> URL? {
         guard let url = try chooseJSONFile(title: "Import Goal Tracker JSON") else { return nil }
-        try restoreJSON(from: url, into: context)
+        try restoreJSON(from: url, into: context, userDefaults: userDefaults)
         return url
     }
 
@@ -235,8 +235,8 @@ enum ImportExportService {
         return panel.url
     }
 
-    static func writeJSONSnapshot(from context: NSManagedObjectContext, to url: URL) throws {
-        let snapshot = try snapshot(from: context)
+    static func writeJSONSnapshot(from context: NSManagedObjectContext, to url: URL, userDefaults: UserDefaults = .standard) throws {
+        let snapshot = try snapshot(from: context, userDefaults: userDefaults)
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         encoder.dateEncodingStrategy = .iso8601
@@ -245,12 +245,12 @@ enum ImportExportService {
         _ = try verifyJSONFile(at: url, expected: snapshot)
     }
 
-    static func restoreJSON(from url: URL, into context: NSManagedObjectContext) throws {
+    static func restoreJSON(from url: URL, into context: NSManagedObjectContext, userDefaults: UserDefaults = .standard) throws {
         let snapshot = try verifyJSONFile(at: url)
-        try replaceData(with: snapshot, in: context)
+        try replaceData(with: snapshot, in: context, userDefaults: userDefaults)
     }
 
-    static func exportCSV(from context: NSManagedObjectContext) throws -> URL? {
+    static func exportCSV(from context: NSManagedObjectContext, userDefaults: UserDefaults = .standard) throws -> URL? {
         let panel = NSOpenPanel()
         panel.title = "Choose Folder for Goal Tracker CSV Export"
         panel.canChooseDirectories = true
@@ -259,12 +259,12 @@ enum ImportExportService {
         panel.allowsMultipleSelection = false
 
         guard panel.runModal() == .OK, let folder = panel.url else { return nil }
-        let snapshot = try snapshot(from: context)
+        let snapshot = try snapshot(from: context, userDefaults: userDefaults)
         try writeCSV(snapshot, to: folder)
         return folder
     }
 
-    static func snapshot(from context: NSManagedObjectContext) throws -> GoalTrackerExport {
+    static func snapshot(from context: NSManagedObjectContext, userDefaults: UserDefaults = .standard) throws -> GoalTrackerExport {
         let values = try context.fetchAll(CoreValue.self)
         let goals = try context.fetchAll(Goal.self)
         let milestones = try context.fetchAll(Milestone.self)
@@ -274,7 +274,7 @@ enum ImportExportService {
 
         return GoalTrackerExport(
             exportedAt: Date(),
-            myValues: MyValueStore.currentValues(),
+            myValues: MyValueStore.currentValues(in: userDefaults),
             values: values.map {
                 CoreValueDTO(id: $0.id, name: $0.name, valueDescription: $0.valueDescription)
             },
@@ -378,9 +378,9 @@ enum ImportExportService {
         ]
     }
 
-    static func replaceData(with snapshot: GoalTrackerExport, in context: NSManagedObjectContext) throws {
+    static func replaceData(with snapshot: GoalTrackerExport, in context: NSManagedObjectContext, userDefaults: UserDefaults = .standard) throws {
         DemoDataService.clearAllData(in: context)
-        MyValueStore.save(snapshot.myValues)
+        MyValueStore.save(snapshot.myValues, in: userDefaults)
 
         var valueMap: [UUID: CoreValue] = [:]
         for dto in snapshot.values {
