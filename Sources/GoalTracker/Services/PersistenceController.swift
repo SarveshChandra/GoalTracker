@@ -5,6 +5,7 @@ final class PersistenceController {
     static let shared = PersistenceController()
 
     let container: NSPersistentContainer
+    let loadError: Error?
 
     init(inMemory: Bool = false) {
         let model = Self.makeModel()
@@ -24,14 +25,18 @@ final class PersistenceController {
             container.persistentStoreDescriptions = [description]
         }
 
+        var persistentStoreLoadError: Error?
         container.loadPersistentStores { _, error in
             if let error {
-                fatalError("Unable to load Goal Tracker persistent store: \(error)")
+                persistentStoreLoadError = error
             }
         }
+        loadError = persistentStoreLoadError
 
-        container.viewContext.mergePolicy = NSMergeByPropertyObjectTrumpMergePolicy
-        container.viewContext.automaticallyMergesChangesFromParent = true
+        if loadError == nil {
+            container.viewContext.mergePolicy = NSMergeByPropertyObjectTrumpMergePolicy
+            container.viewContext.automaticallyMergesChangesFromParent = true
+        }
     }
 
     private static func makeModel() -> NSManagedObjectModel {

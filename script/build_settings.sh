@@ -1,0 +1,8 @@
+APP_NAME="GoalTracker"
+BUNDLE_NAME="Goal Tracker"
+BUNDLE_ID="${GOAL_TRACKER_BUNDLE_ID:-com.goaltracker.app}"
+MIN_SYSTEM_VERSION="14.0"
+APP_VERSION="${GOAL_TRACKER_APP_VERSION:-1.0.0}"
+BUILD_VERSION="${GOAL_TRACKER_BUILD_VERSION:-1}"
+APP_CATEGORY="public.app-category.productivity"
+APP_COPYRIGHT="Copyright 2026 Goal Tracker"

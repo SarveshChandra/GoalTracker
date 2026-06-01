@@ -41,7 +41,7 @@ private enum GoalTrackerLaunchMode: Equatable {
         case .normal:
             return .standard
         case .previewGoals:
-            let suiteName = "local.goaltracker.app.preview"
+            let suiteName = GoalTrackerAppIdentity.previewSuiteName
             let defaults = UserDefaults(suiteName: suiteName) ?? .standard
             defaults.removePersistentDomain(forName: suiteName)
             defaults.set(NavigationSection.goals.rawValue, forKey: "GoalTracker.selectedSection")
@@ -77,11 +77,25 @@ struct GoalTrackerApp: App {
         ThemePreference(rawValue: themePreferenceRaw) ?? .system
     }
 
+    private var storeLoadError: Error? {
+        persistenceController.loadError
+    }
+
     init() {
         let launchMode = GoalTrackerLaunchMode(arguments: CommandLine.arguments)
+        let userDefaults = launchMode.userDefaults
+        if launchMode == .normal {
+            GoalTrackerDefaultsMigrationService.migrateLegacyDefaultsIfNeeded(into: userDefaults)
+        }
+
         self.launchMode = launchMode
         self.persistenceController = launchMode.usesInMemoryStore ? PersistenceController(inMemory: true) : PersistenceController.shared
-        self.userDefaults = launchMode.userDefaults
+        self.userDefaults = userDefaults
+        _themePreferenceRaw = AppStorage(
+            wrappedValue: ThemePreference.system.rawValue,
+            "GoalTracker.themePreference",
+            store: userDefaults
+        )
 
         if CommandLine.arguments.contains("--reset-demo-data") {
             DemoDataService.installDemoData(in: persistenceController.container.viewContext, markInstalled: true)
@@ -98,27 +112,42 @@ struct GoalTrackerApp: App {
 
     var body: some Scene {
         Window("Goal Tracker", id: "main") {
-            ContentView(
-                initialSectionOverride: launchMode.initialSection,
-                allowsAutomaticBackupsOverride: launchMode.allowsAutomaticBackups,
-                userDefaults: userDefaults
-            )
-                .defaultAppStorage(userDefaults)
-                .environment(\.goalTrackerUserDefaults, userDefaults)
-                .font(.custom("Helvetica Neue", size: 13))
-                .goalTrackerAppTheme(theme)
-                .environment(\.managedObjectContext, persistenceController.container.viewContext)
+            if let storeLoadError {
+                StoreLoadFailureView(error: storeLoadError)
+                    .font(.custom("Helvetica Neue", size: 13))
+                    .goalTrackerAppTheme(theme)
+            } else {
+                ContentView(
+                    initialSectionOverride: launchMode.initialSection,
+                    allowsAutomaticBackupsOverride: launchMode.allowsAutomaticBackups,
+                    userDefaults: userDefaults
+                )
+                    .defaultAppStorage(userDefaults)
+                    .environment(\.goalTrackerUserDefaults, userDefaults)
+                    .font(.custom("Helvetica Neue", size: 13))
+                    .goalTrackerAppTheme(theme)
+                    .environment(\.managedObjectContext, persistenceController.container.viewContext)
+            }
         }
         .windowStyle(.hiddenTitleBar)
-        .defaultSize(width: 1480, height: 900)
+        .defaultSize(
+            width: storeLoadError == nil ? 1480 : 900,
+            height: storeLoadError == nil ? 900 : 560
+        )
 
         Settings {
-            SettingsView(allowsDataSafetyActions: launchMode.allowsAutomaticBackups, userDefaults: userDefaults)
-                .defaultAppStorage(userDefaults)
-                .environment(\.goalTrackerUserDefaults, userDefaults)
-                .font(.custom("Helvetica Neue", size: 13))
-                .goalTrackerAppTheme(theme)
-                .environment(\.managedObjectContext, persistenceController.container.viewContext)
+            if let storeLoadError {
+                StoreLoadFailureView(error: storeLoadError)
+                    .font(.custom("Helvetica Neue", size: 13))
+                    .goalTrackerAppTheme(theme)
+            } else {
+                SettingsView(allowsDataSafetyActions: launchMode.allowsAutomaticBackups, userDefaults: userDefaults)
+                    .defaultAppStorage(userDefaults)
+                    .environment(\.goalTrackerUserDefaults, userDefaults)
+                    .font(.custom("Helvetica Neue", size: 13))
+                    .goalTrackerAppTheme(theme)
+                    .environment(\.managedObjectContext, persistenceController.container.viewContext)
+            }
         }
     }
 }

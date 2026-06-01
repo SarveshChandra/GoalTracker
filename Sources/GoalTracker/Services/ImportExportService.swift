@@ -5,7 +5,7 @@ import CoreData
 struct GoalTrackerExport: Codable {
     static let currentSchemaVersion = 6
     static var currentAppVersion: String {
-        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0"
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0.0"
     }
 
     var schemaVersion: Int
