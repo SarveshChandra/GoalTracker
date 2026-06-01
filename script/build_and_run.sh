@@ -7,21 +7,25 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "$ROOT_DIR/script/build_settings.sh"
 
 DIST_DIR="$ROOT_DIR/dist"
+RELEASE_DIR="$ROOT_DIR/release"
 BUILD_ROOT="$ROOT_DIR/.build"
 STAGING_ROOT="${TMPDIR%/}/GoalTracker-build"
 APP_BUNDLE="$STAGING_ROOT/$BUNDLE_NAME.app"
-LEGACY_DIST_APP="$DIST_DIR/$BUNDLE_NAME.app"
+DIST_APP_BUNDLE="$DIST_DIR/$BUNDLE_NAME.app"
 APP_CONTENTS="$APP_BUNDLE/Contents"
 APP_MACOS="$APP_CONTENTS/MacOS"
 APP_RESOURCES="$APP_CONTENTS/Resources"
 APP_BINARY="$APP_MACOS/$APP_NAME"
+DIST_APP_BINARY="$DIST_APP_BUNDLE/Contents/MacOS/$APP_NAME"
 INFO_PLIST="$APP_CONTENTS/Info.plist"
 PACKAGE_STEM="${BUNDLE_NAME// /-}-${APP_VERSION}-${BUILD_VERSION}"
-PACKAGE_PATH="$DIST_DIR/$PACKAGE_STEM.zip"
+PACKAGE_PATH="$RELEASE_DIR/$PACKAGE_STEM.zip"
+LEGACY_PACKAGE_PATH="$DIST_DIR/$PACKAGE_STEM.zip"
 BUILT_BINARY=""
 
 kill_running_app() {
   pkill -f "$APP_BINARY" >/dev/null 2>&1 || true
+  pkill -f "$DIST_APP_BINARY" >/dev/null 2>&1 || true
   pkill -x "$APP_NAME" >/dev/null 2>&1 || true
 }
 
@@ -106,8 +110,8 @@ PLIST
 
 stage_bundle() {
   rm -rf "$APP_BUNDLE"
-  rm -rf "$LEGACY_DIST_APP"
-  mkdir -p "$DIST_DIR" "$STAGING_ROOT"
+  rm -rf "$DIST_APP_BUNDLE"
+  mkdir -p "$DIST_DIR" "$RELEASE_DIR" "$STAGING_ROOT"
   mkdir -p "$APP_MACOS" "$APP_RESOURCES"
   cp "$BUILT_BINARY" "$APP_BINARY"
   chmod +x "$APP_BINARY"
@@ -141,10 +145,16 @@ validate_bundle() {
   /usr/bin/codesign --verify --deep --strict --verbose=2 "$APP_BUNDLE"
 }
 
+mirror_bundle_to_dist() {
+  rm -rf "$DIST_APP_BUNDLE"
+  /usr/bin/ditto "$APP_BUNDLE" "$DIST_APP_BUNDLE"
+}
+
 package_bundle() {
   rm -f "$PACKAGE_PATH"
+  rm -f "$LEGACY_PACKAGE_PATH"
   /usr/bin/ditto -c -k --keepParent "$APP_BUNDLE" "$PACKAGE_PATH"
-  echo "Staged signed app bundle: $APP_BUNDLE"
+  echo "Project app bundle: $DIST_APP_BUNDLE"
   echo "Packaged release artifact: $PACKAGE_PATH"
 }
 
@@ -178,6 +188,7 @@ case "$MODE" in
     stage_bundle
     sign_bundle
     validate_bundle
+    mirror_bundle_to_dist
     open_app
     ;;
   --preview-goals|preview-goals)
@@ -186,6 +197,7 @@ case "$MODE" in
     stage_bundle
     sign_bundle
     validate_bundle
+    mirror_bundle_to_dist
     open_app --preview-goals
     ;;
   --debug|debug)
@@ -194,6 +206,7 @@ case "$MODE" in
     stage_bundle
     sign_bundle
     validate_bundle
+    mirror_bundle_to_dist
     lldb -- "$APP_BINARY"
     ;;
   --logs|logs)
@@ -202,6 +215,7 @@ case "$MODE" in
     stage_bundle
     sign_bundle
     validate_bundle
+    mirror_bundle_to_dist
     open_app
     /usr/bin/log stream --info --style compact --predicate "process == \"$APP_NAME\""
     ;;
@@ -211,6 +225,7 @@ case "$MODE" in
     stage_bundle
     sign_bundle
     validate_bundle
+    mirror_bundle_to_dist
     open_app
     /usr/bin/log stream --info --style compact --predicate "subsystem == \"$BUNDLE_ID\""
     ;;
@@ -220,6 +235,7 @@ case "$MODE" in
     stage_bundle
     sign_bundle
     validate_bundle
+    mirror_bundle_to_dist
     open_app
     sleep 2
     pgrep -f "$APP_BINARY" >/dev/null
@@ -233,7 +249,8 @@ case "$MODE" in
     stage_bundle
     sign_bundle
     validate_bundle
-    echo "Built release app bundle: $APP_BUNDLE"
+    mirror_bundle_to_dist
+    echo "Built release app bundle: $DIST_APP_BUNDLE"
     ;;
   --package|package)
     run_regression_checks
@@ -241,6 +258,7 @@ case "$MODE" in
     stage_bundle
     sign_bundle
     validate_bundle
+    mirror_bundle_to_dist
     package_bundle
     ;;
   --notarize|notarize)
@@ -249,6 +267,7 @@ case "$MODE" in
     stage_bundle
     sign_bundle
     validate_bundle
+    mirror_bundle_to_dist
     package_bundle
     notarize_bundle
     ;;

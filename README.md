@@ -24,7 +24,7 @@ Use the project-local run script:
 ./script/build_and_run.sh
 ```
 
-The script compiles the SwiftUI/Core Data app with `swiftc`, generates the app icon, stages a signed `.app` bundle in a temporary local build folder, and launches it as a normal macOS app bundle. Release zip artifacts are written to `dist/`. The Codex Run action is wired to the same script.
+The script compiles the SwiftUI/Core Data app with `swiftc`, generates the app icon, signs and validates the bundle in a temporary local build folder, mirrors the finished `.app` to `dist/Goal Tracker.app`, and launches it as a normal macOS app bundle. Release zip artifacts are written to `release/`. The Codex Run action is wired to the same script.
 
 Useful modes:
 
@@ -35,7 +35,7 @@ Useful modes:
 ./script/build_and_run.sh --package
 ```
 
-`--verify` confirms the app launches successfully. `preview-goals` opens the README preview window using synthetic in-memory data. `--check` runs the built-in regression suite. `--package` produces a release zip archive in `dist/` and prints the staged signed `.app` path.
+`--verify` confirms the app launches successfully. `preview-goals` opens the README preview window using synthetic in-memory data. `--check` runs the built-in regression suite. `--package` keeps the `.app` in `dist/` and writes the release zip archive to `release/`.
 
 ## Production Release
 
@@ -59,7 +59,7 @@ Release commands:
 ./script/build_and_run.sh --notarize
 ```
 
-`--release` builds and validates the release `.app` and prints its staged path. `--package` also creates a zip archive. `--notarize` submits that archive with `notarytool`, staples the result, and rebuilds the zip with the stapled app.
+`--release` builds and validates the release `.app` in `dist/`. `--package` also creates a zip archive in `release/`. `--notarize` submits that archive with `notarytool`, staples the result, and rebuilds the zip with the stapled app.
 
 ## Persistence
 
