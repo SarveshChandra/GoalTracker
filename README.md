@@ -94,3 +94,5 @@ Goal Tracker includes mirrored JSON backup support for iCloud Drive:
 - Read-only Dashboard and Daily Streak views
 - Demo data reset and clear-all controls
 - JSON import/export and CSV export
+
+**This project is built using Codex by ChatGPT, OpenAI.**
