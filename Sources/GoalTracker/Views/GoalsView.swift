@@ -111,6 +111,7 @@ struct GoalsView: View {
                 HeaderCell(text: "Start Date", width: GoalColumns.startDate)
                 HeaderCell(text: "Due Date", width: GoalColumns.endDate)
                 HeaderCell(text: "Time Horizon", width: GoalColumns.timeHorizon)
+                HeaderCell(text: "Last Completed", width: GoalColumns.lastCompleted)
                 HeaderCell(text: "Progress %", width: GoalColumns.progress)
                 HeaderCell(text: "Status", width: GoalColumns.status)
                 HeaderCell(text: "Anti-Goal", width: GoalColumns.antiGoal)
@@ -133,6 +134,7 @@ struct GoalsView: View {
                     DataCell(text: DateUtils.displayDate(goal.startDate), width: GoalColumns.startDate)
                     DataCell(text: DateUtils.displayDate(goal.endDate), width: GoalColumns.endDate)
                     NumberCell(text: goal.timeHorizon, width: GoalColumns.timeHorizon)
+                    DataCell(text: goal.lastCompletedText, width: GoalColumns.lastCompleted)
                     ProgressCell(value: goal.computedProgress, width: GoalColumns.progress)
                     StatusCell(text: goal.status.rawValue, color: GoalTrackerTheme.background(for: goal.status), width: GoalColumns.status)
                     DataCell(text: goal.antiGoal, width: GoalColumns.antiGoal)
@@ -176,6 +178,7 @@ struct GoalsView: View {
             (DateUtils.displayDate(goal.startDate), GoalColumns.startDate),
             (DateUtils.displayDate(goal.endDate), GoalColumns.endDate),
             (goal.timeHorizon, GoalColumns.timeHorizon),
+            (goal.lastCompletedText, GoalColumns.lastCompleted),
             (goal.status.rawValue, GoalColumns.status),
             (goal.antiGoal, GoalColumns.antiGoal),
             (goal.sacrifice, GoalColumns.sacrifice)
@@ -220,6 +223,7 @@ private enum GoalColumns {
     static let startDate = TableMetrics.columnWidth("Start Date", min: 100)
     static let endDate = TableMetrics.columnWidth("Due Date", min: 100)
     static let timeHorizon = TableMetrics.columnWidth("Time Horizon", min: 120)
+    static let lastCompleted = TableMetrics.columnWidth("Last Completed", min: 130)
     static let progress = TableMetrics.columnWidth("Progress %", min: 140)
     static let status = TableMetrics.columnWidth("Status", min: 130)
     static let antiGoal = TableMetrics.columnWidth("Anti-Goal", min: 220)

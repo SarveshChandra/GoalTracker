@@ -169,6 +169,36 @@ struct VerifyGoalTracker {
             verify(taskWithMixedSessions.sessionProgress > 0 && taskWithMixedSessions.sessionProgress < 100, "Mixed Session statuses should produce partial Task progress.")
         }
 
+        let lastCompletedGoal = Goal(context: context, name: "Last Completed Probe", startDate: Date(), endDate: futureDueDate)
+        let lastCompletedMilestone = Milestone(context: context, name: "Probe Milestone", goal: lastCompletedGoal, startDate: Date(), endDate: futureDueDate)
+        let lastCompletedTask = TaskItem(context: context, name: "Probe Task", milestone: lastCompletedMilestone)
+        let earlierCompletedDate = calendar.date(byAdding: .day, value: -6, to: Date()) ?? Date()
+        let laterCompletedDate = calendar.date(byAdding: .day, value: -2, to: Date()) ?? Date()
+        _ = WorkSession(
+            context: context,
+            task: lastCompletedTask,
+            sessionLabel: "Earlier completed block",
+            estimatedMinutes: 30,
+            actualMinutes: 30,
+            status: .completed,
+            sessionDate: earlierCompletedDate
+        )
+        let laterSession = WorkSession(
+            context: context,
+            task: lastCompletedTask,
+            sessionLabel: "Later block",
+            estimatedMinutes: 30,
+            actualMinutes: 20,
+            status: .partial,
+            sessionDate: laterCompletedDate
+        )
+        verify(lastCompletedGoal.lastCompletedDate == earlierCompletedDate, "Goal Last Completed should start from the latest completed Session date.")
+        laterSession.status = .completed
+        verify(lastCompletedGoal.lastCompletedDate == laterCompletedDate, "Goal Last Completed should move forward when a later Session is completed.")
+        laterSession.status = .notStarted
+        verify(lastCompletedGoal.lastCompletedDate == earlierCompletedDate, "Goal Last Completed should fall back when the latest completed Session is no longer completed.")
+        context.delete(lastCompletedGoal)
+
         if let cascadeGoal = goals.first(where: { !$0.milestones.isEmpty }),
            let cascadeMilestone = cascadeGoal.milestones.first(where: { !$0.tasks.isEmpty }),
            let cascadeTask = cascadeMilestone.tasks.first(where: { !$0.sessions.isEmpty }),

@@ -153,7 +153,7 @@ mirror_bundle_to_dist() {
 package_bundle() {
   rm -f "$PACKAGE_PATH"
   rm -f "$LEGACY_PACKAGE_PATH"
-  /usr/bin/ditto -c -k --keepParent "$APP_BUNDLE" "$PACKAGE_PATH"
+  /usr/bin/ditto -c -k --keepParent "$DIST_APP_BUNDLE" "$PACKAGE_PATH"
   echo "Project app bundle: $DIST_APP_BUNDLE"
   echo "Packaged release artifact: $PACKAGE_PATH"
 }
@@ -173,12 +173,13 @@ notarize_bundle() {
 
   xcrun notarytool submit "$PACKAGE_PATH" --keychain-profile "$GOAL_TRACKER_NOTARY_PROFILE" --wait
   xcrun stapler staple "$APP_BUNDLE"
-  /usr/sbin/spctl --assess --type execute --verbose=4 "$APP_BUNDLE"
+  mirror_bundle_to_dist
+  /usr/sbin/spctl --assess --type execute --verbose=4 "$DIST_APP_BUNDLE"
   package_bundle
 }
 
 open_app() {
-  /usr/bin/open -n "$APP_BUNDLE" --args "$@"
+  /usr/bin/open -n "$DIST_APP_BUNDLE" --args "$@"
 }
 
 case "$MODE" in
@@ -207,7 +208,7 @@ case "$MODE" in
     sign_bundle
     validate_bundle
     mirror_bundle_to_dist
-    lldb -- "$APP_BINARY"
+    lldb -- "$DIST_APP_BINARY"
     ;;
   --logs|logs)
     kill_running_app
@@ -238,7 +239,7 @@ case "$MODE" in
     mirror_bundle_to_dist
     open_app
     sleep 2
-    pgrep -f "$APP_BINARY" >/dev/null
+    pgrep -f "$DIST_APP_BINARY" >/dev/null
     ;;
   --check|check)
     run_regression_checks

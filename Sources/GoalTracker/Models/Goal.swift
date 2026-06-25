@@ -63,6 +63,23 @@ final class Goal: NSManagedObject, Identifiable {
         DateUtils.humanDuration(from: startDate, to: endDate)
     }
 
+    var lastCompletedDate: Date? {
+        milestones
+            .filter { !$0.isDeleted }
+            .flatMap(\.tasks)
+            .filter { !$0.isDeleted }
+            .flatMap { task in
+                task.sessions
+                    .filter { !$0.isDeleted && $0.status == .completed }
+                    .map { $0.sessionDate ?? $0.updatedAt }
+            }
+            .max()
+    }
+
+    var lastCompletedText: String {
+        lastCompletedDate.map { DateUtils.displayDate($0) } ?? ""
+    }
+
     var linkedMilestonesCount: Int { milestones.count }
 
     var computedProgress: Double {
